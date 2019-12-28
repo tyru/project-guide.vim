@@ -5,15 +5,25 @@ function! project_guide#open(dirs_pattern) abort
   if !s:check_required_cmds()
     return
   endif
+  if !s:current_tabpage_is_empty()
+    tabedit
+  endif
   " Select a project
   let in_name = tempname()
   let project_dirs = glob(a:dirs_pattern, 1, 1)->filter({-> isdirectory(v:val)})
   call writefile(project_dirs, in_name)
   let term_bufnr = term_start(['peco', '--exec', 'vargs call project_guide#_tcd_and_open', in_name], #{
+    \ curwin: v:true,
     \ term_finish: 'close',
     \ term_api: 'project_guide#_',
     \})
-  call setbufvar(term_bufnr, 'vimrc_gof_volt_repos', #{in_name: in_name})
+  call setbufvar(term_bufnr, 'vimrc_gof_volt_repos', #{
+    \ in_name: in_name,
+    \})
+endfunction
+
+function! s:current_tabpage_is_empty() abort
+  return winnr('$') ==# 1 && !&modified && line('$') ==# 1 && getline(1) ==# ''
 endfunction
 
 function! s:check_required_cmds() abort
@@ -38,9 +48,9 @@ function! project_guide#_tcd_and_open(bufnr, path) abort
   if ctx is# v:null
     throw 'project_guide#_tcd_and_open: could not get b:vimrc_gof_volt_repos from terminal buffer'
   endif
+  tabedit
   call term_sendkeys(a:bufnr, "\<Esc>")  " exit peco
   call delete(ctx.in_name)
-  tabedit
   " Change current directory to the project
   execute 'tcd' a:path
   " Select a file to open
