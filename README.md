@@ -1,6 +1,12 @@
 # project-guide.vim
 
 This library provides cool function to quickly open a project.
+Currently `project_guide#open({project directories pattern})` does:
+
+1. Show project directories
+2. `:tcd {project directory}`
+3. Show files in the project
+4. `:drop {file}`
 
 ## Examples
 
@@ -27,6 +33,8 @@ function! s:volt_repos() abort
   call project_guide#open(root_dir .. '/repos/*/*/*')
 endfunction
 ```
+
+![](https://i.imgur.com/7Ish7j6.gif)
 
 ## Requirements
 
