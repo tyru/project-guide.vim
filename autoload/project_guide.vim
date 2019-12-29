@@ -17,7 +17,7 @@ function! project_guide#open(dirs_pattern) abort
     \ term_finish: 'close',
     \ term_api: 'project_guide#_',
     \})
-  call setbufvar(term_bufnr, 'vimrc_gof_volt_repos', #{
+  call setbufvar(term_bufnr, 'project_guide_context', #{
     \ in_name: in_name,
     \})
 endfunction
@@ -44,9 +44,9 @@ function! s:check_required_cmds() abort
 endfunction
 
 function! project_guide#_tcd_and_open(bufnr, path) abort
-  let ctx = getbufvar(a:bufnr, 'vimrc_gof_volt_repos', v:null)
+  let ctx = getbufvar(a:bufnr, 'project_guide_context', v:null)
   if ctx is# v:null
-    throw 'project_guide#_tcd_and_open: could not get b:vimrc_gof_volt_repos from terminal buffer'
+    throw 'project_guide#_tcd_and_open: could not get b:project_guide_context from terminal buffer'
   endif
   tabedit
   call term_sendkeys(a:bufnr, "\<Esc>")  " exit peco
@@ -60,16 +60,16 @@ function! project_guide#_tcd_and_open(bufnr, path) abort
     \ term_finish: 'close',
     \ term_api: 'project_guide#_',
     \})
-  call setbufvar(term_bufnr, 'vimrc_gof_volt_repos', #{
+  call setbufvar(term_bufnr, 'project_guide_context', #{
     \ popup: popup,
     \ term_winid: win_getid(bufwinnr(term_bufnr))
     \})
 endfunction
 
 function! project_guide#_finalize(bufnr, file) abort
-  let ctx = getbufvar(a:bufnr, 'vimrc_gof_volt_repos', v:null)
+  let ctx = getbufvar(a:bufnr, 'project_guide_context', v:null)
   if ctx is# v:null
-    throw 'project_guide#_finalize: could not get b:vimrc_gof_volt_repos from terminal buffer'
+    throw 'project_guide#_finalize: could not get b:project_guide_context from terminal buffer'
   endif
   call popup_close(ctx.popup)
   execute 'drop' a:file.fullpath
