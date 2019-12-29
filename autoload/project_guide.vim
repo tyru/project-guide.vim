@@ -54,7 +54,7 @@ function! project_guide#_tcd_and_open(bufnr, path) abort
   " Change current directory to the project
   execute 'tcd' a:path
   " Select a file to open
-  let popup = popup_dialog('Select a file to open.', {})
+  let popup = popup_dialog('Select a file to open', {})
   let term_bufnr = term_start(['gof', '-tf', 'project_guide#_finalize'], #{
     \ curwin: v:true,
     \ term_finish: 'close',
