@@ -13,14 +13,25 @@ Currently `project_guide#open({project directories pattern})` does:
 ### Open `$GOPATH/src/*/*/*`
 
 ```vim
-command! Gopath call s:gopath()
-function! s:gopath() abort
+function! s:gopath_dirs_pattern() abort
   let root_dir = exists('$GOPATH') ? expand('$GOPATH') : expand('$HOME/go')
-  call project_guide#open(root_dir .. '/src/*/*/*')
+  let dirs_pattern = root_dir .. '/src/*/*/*'
+  return dirs_pattern
 endfunction
+" call project_guide#define_command() at VimEnter,
+" because project-guide.vim is not loaded yet in your vimrc.
+autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'), #{gof_args: ['-f']})
 ```
 
 ![](https://i.imgur.com/YJ4qWsT.gif)
+
+You can also specify initial query (`:Gopath myproject`)
+
+![](https://i.imgur.com/x1cagS1.gif)
+
+And you can complete Ex command arguments (`:Gopath <Tab>` or `:Gopath myproj<Tab>`)
+
+![](https://i.imgur.com/DEM2bDk.gif)
 
 ### Open `$VOLTPATH/repos/*/*/*` of [Volt](https://github.com/vim-volt/volt) (Vim plugin manager)
 
@@ -57,7 +68,7 @@ endfunction
 }
 ```
 
-Here is the example to use `{options}`.
+Here is the example to use `{options}` (`peco_args`, `gof_args`).
 
 ```vim
 command! -nargs=* -complete=dir Gopath call s:gopath(<q-args>)
@@ -69,6 +80,11 @@ function! s:gopath(query) abort
   \})
 endfunction
 ```
+
+Now you can specify initial query to peco (`:Gopath myproject`)
+
+And more, if you also want to complete Ex command arguments, you can use
+`project_guide#complete()`.
 
 ## `project_guide#complete({dirs_pattern}, {arglead}, {cmdline}, {pos})`
 
@@ -95,4 +111,23 @@ function! s:gopath_dirs_pattern() abort
 endfunction
 ```
 
-Hmm, code is getting messy, is there more "easy" way to do it?
+Hmm, code is getting messy, is there more an "easy" way to do it?
+
+## `project_guide#define_command({cmdname} (string), {dirs_pattern_func} (string or function) [, {options} = {}])`
+
+This is the final answer, `project_guide#define_command()`.<br>
+This generates the same functions above.
+
+```vim
+function! s:gopath_dirs_pattern() abort
+  let root_dir = exists('$GOPATH') ? expand('$GOPATH') : expand('$HOME/go')
+  let dirs_pattern = root_dir .. '/src/*/*/*'
+  return dirs_pattern
+endfunction
+call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'), #{gof_args: ['-f']})
+```
+
+Now you can:
+
+* Specify initial query to peco (`:Gopath myproject`)
+* Complete Ex command arguments (`:Gopath <Tab>` or `:Gopath myproj<Tab>`)

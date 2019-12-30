@@ -40,6 +40,37 @@ function! project_guide#complete(dirs_pattern, arglead, cmdline, pos) abort
   return dirs
 endfunction
 
+function! project_guide#define_command(cmdname, dirs_pattern_func, options = {}) abort
+  if type(a:dirs_pattern_func) ==# v:t_func
+    let dirs_pattern = call(a:dirs_pattern_func, [])
+  elseif type(a:dirs_pattern_func) ==# v:t_string
+    let dirs_pattern = a:dirs_pattern_func
+  else
+    echohl ErrorMsg
+    echomsg 'project_guide#define_command: Invalid {dirs_pattern_func} argument.'
+    echohl None
+    return
+  endif
+
+  execute [
+    \ 'function! s:complete_' .. a:cmdname .. '(...) abort',
+    \ '  return call("project_guide#complete", [' .. string(dirs_pattern) .. '] + a:000)',
+    \ 'endfunction',
+    \]->join("\n")
+
+  let a:options.dirs_pattern = dirs_pattern
+  execute 'command! -nargs=* -complete=customlist,s:complete_' .. a:cmdname .. ' ' .. a:cmdname .. ' call s:open(' .. string(a:options) .. ', <q-args>)'
+endfunction
+
+function! s:open(options, query) abort
+  let options = deepcopy(a:options)
+  if !has_key(options, 'peco_args') || type(options.peco_args) !=# v:t_list
+    let options.peco_args = []
+  endif
+  let options.peco_args += a:query !=# '' ? ['--query', a:query] : []
+  call project_guide#open(a:options.dirs_pattern, options)
+endfunction
+
 function! s:get_project_dirs(dirs_pattern) abort
   return glob(a:dirs_pattern, 1, 1)->filter({-> isdirectory(v:val)})
 endfunction
