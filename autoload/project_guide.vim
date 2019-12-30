@@ -15,7 +15,7 @@ function! project_guide#open(dirs_pattern, options = {}) abort
   endif
   " Select a project
   let in_name = tempname()
-  let project_dirs = glob(a:dirs_pattern, 1, 1)->filter({-> isdirectory(v:val)})
+  let project_dirs = s:get_project_dirs(a:dirs_pattern)
   call writefile(project_dirs, in_name)
   let peco_args = get(a:options, 'peco_args', [])
   let peco_args = type(peco_args) ==# v:t_list ? peco_args : []
@@ -30,6 +30,18 @@ function! project_guide#open(dirs_pattern, options = {}) abort
     \ in_name: in_name,
     \ gof_args: gof_args,
     \})
+endfunction
+
+function! project_guide#complete(dirs_pattern, arglead, cmdline, pos) abort
+  let dirs = s:get_project_dirs(a:dirs_pattern)
+  if a:arglead !=# ''
+    call filter(dirs, 'stridx(v:val, a:arglead) !=# -1')
+  endif
+  return dirs
+endfunction
+
+function! s:get_project_dirs(dirs_pattern) abort
+  return glob(a:dirs_pattern, 1, 1)->filter({-> isdirectory(v:val)})
 endfunction
 
 function! s:current_tabpage_is_empty() abort

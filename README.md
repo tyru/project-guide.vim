@@ -69,3 +69,30 @@ function! s:gopath(query) abort
   \})
 endfunction
 ```
+
+## `project_guide#complete({dirs_pattern}, {arglead}, {cmdline}, {pos})`
+
+You can create custom completion function using this.
+
+```vim
+command! -nargs=* -complete=customlist,s:complete Gopath call s:gopath(<q-args>)
+
+function! s:gopath(query) abort
+  call project_guide#open(s:gopath_dirs_pattern(), #{
+  \ peco_args: a:query !=# '' ? ['--query', a:query] : [],
+  \ gof_args: ['-f'],
+  \})
+endfunction
+
+function! s:complete(...) abort
+  return call('project_guide#complete', [s:gopath_dirs_pattern()] + a:000)
+endfunction
+
+function! s:gopath_dirs_pattern() abort
+  let root_dir = exists('$GOPATH') ? expand('$GOPATH') : expand('$HOME/go')
+  let dirs_pattern = root_dir .. '/src/*/*/*'
+  return dirs_pattern
+endfunction
+```
+
+Hmm, code is getting messy, is there more "easy" way to do it?
