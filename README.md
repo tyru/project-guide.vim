@@ -42,3 +42,30 @@ endfunction
 * [gof](https://github.com/mattn/gof)
 * [vargs](https://github.com/tyru/vargs)
 * [peco](https://github.com/peco/peco)
+
+## `project_guide#open({dirs_pattern} [, {options}])`
+
+1. List up `{dirs_pattern}` directories
+2. `:tcd {selected directory}`
+3. List up files under the selected directory
+4. `:drop {selected file}`
+
+```
+{options} = {
+  peco_args: <peco additional arguments (List)>,
+  gof_args: <gof additional arguments (List)>,
+}
+```
+
+Here is the example to use `{options}`.
+
+```vim
+command! -nargs=* -complete=dir Gopath call s:gopath(<q-args>)
+function! s:gopath(query) abort
+  let root_dir = exists('$GOPATH') ? expand('$GOPATH') : expand('$HOME/go')
+  call project_guide#open(root_dir .. '/src/*/*/*', #{
+  \ peco_args: a:query !=# '' ? ['--query', a:query] : [],
+  \ gof_args: ['-f'],
+  \})
+endfunction
+```

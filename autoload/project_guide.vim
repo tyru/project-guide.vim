@@ -1,7 +1,7 @@
 scriptencoding utf-8
 scriptversion 4
 
-function! project_guide#open(dirs_pattern) abort
+function! project_guide#open(dirs_pattern, options = {}) abort
   if v:version < 802
     echohl ErrorMsg
     echomsg 'project-guide: Please use Vim 8.2 or higher.'
@@ -17,13 +17,18 @@ function! project_guide#open(dirs_pattern) abort
   let in_name = tempname()
   let project_dirs = glob(a:dirs_pattern, 1, 1)->filter({-> isdirectory(v:val)})
   call writefile(project_dirs, in_name)
-  let term_bufnr = term_start(['peco', '--exec', 'vargs call project_guide#_tcd_and_open', in_name], #{
+  let peco_args = get(a:options, 'peco_args', [])
+  let peco_args = type(peco_args) ==# v:t_list ? peco_args : []
+  let term_bufnr = term_start(['peco'] + peco_args + ['--exec', 'vargs call project_guide#_tcd_and_open', in_name], #{
     \ curwin: v:true,
     \ term_finish: 'close',
     \ term_api: 'project_guide#_',
     \})
+  let gof_args = get(a:options, 'gof_args', [])
+  let gof_args = type(gof_args) ==# v:t_list ? gof_args : []
   call setbufvar(term_bufnr, 'project_guide_context', #{
     \ in_name: in_name,
+    \ gof_args: gof_args,
     \})
 endfunction
 
@@ -60,7 +65,7 @@ function! project_guide#_tcd_and_open(bufnr, path) abort
   execute 'tcd' a:path
   " Select a file to open
   let popup = popup_dialog('Select a file to open', {})
-  let term_bufnr = term_start(['gof', '-tf', 'project_guide#_finalize'], #{
+  let term_bufnr = term_start(['gof'] + ctx.gof_args + ['-tf', 'project_guide#_finalize'], #{
     \ curwin: v:true,
     \ term_finish: 'close',
     \ term_api: 'project_guide#_',
