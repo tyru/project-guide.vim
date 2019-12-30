@@ -2,6 +2,11 @@ scriptencoding utf-8
 scriptversion 4
 
 function! project_guide#open(dirs_pattern) abort
+  if v:version < 802
+    echohl ErrorMsg
+    echomsg 'project-guide: Please use Vim 8.2 or higher.'
+    echohl None
+  endif
   if !s:check_required_cmds()
     return
   endif

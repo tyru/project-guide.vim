@@ -38,6 +38,7 @@ endfunction
 
 ## Requirements
 
+* Vim 8.2 or higher
 * [gof](https://github.com/mattn/gof)
 * [vargs](https://github.com/tyru/vargs)
 * [peco](https://github.com/peco/peco)
