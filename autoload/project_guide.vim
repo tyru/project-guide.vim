@@ -27,12 +27,17 @@ function! s:select_project(dirs_pattern, options) abort
   let initial_bufnr = bufnr('')
   let gof_args = get(a:options, 'gof_args', [])
   let gof_args = copy(type(gof_args) ==# v:t_list ? gof_args : [])
+  let dialog_msg = a:options->get('project_dialog_msg', 'Choose a project')
+  let dialog_options = a:options->get('project_dialog_options', #{time: 2000})
+  let popup = empty(dialog_msg) ? -1 : popup_dialog(dialog_msg, dialog_options)
   let peco_ctx = #{
-    \ popup: popup_dialog('Choose a project', #{time: 2000}),
+    \ popup: popup,
     \ in_name: in_name,
     \ gof_args: gof_args,
     \ initial_bufnr: initial_bufnr,
     \ open_func: a:options->get('open_func', function('project_guide#default_open_func')),
+    \ file_dialog_msg: a:options->get('file_dialog_msg', 'Choose a file'),
+    \ file_dialog_options: a:options->get('file_dialog_options', #{time: 2000}),
     \}
   let term_bufnr = term_start(['peco'] + peco_args, #{
     \ curwin: v:true,
@@ -144,8 +149,10 @@ function! s:tcd_and_select_file(peco_ctx, job, code) abort
   " -a ctrl-o: behave Ctrl-O like same as Enter
   let gof_args = a:peco_ctx.gof_args +
     \ ['-x', '0', '-a', 'ctrl-o']
+  let popup = empty(a:peco_ctx.file_dialog_msg) ?
+    \ -1 : popup_dialog(a:peco_ctx.file_dialog_msg, a:peco_ctx.file_dialog_options)
   let gof_ctx = #{
-    \ popup: popup_dialog('Choose a file', #{time: 2000}),
+    \ popup: popup,
     \ initial_bufnr: a:peco_ctx.initial_bufnr,
     \ open_func: a:peco_ctx.open_func,
     \}
