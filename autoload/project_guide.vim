@@ -10,34 +10,41 @@ function! project_guide#open(dirs_pattern, options = {}) abort
   if !s:check_required_cmds()
     return
   endif
+  call s:select_project(a:dirs_pattern, a:options)
+endfunction
+
+function! s:select_project(dirs_pattern, options) abort
   if !s:current_tabpage_is_empty()
     tabedit
   endif
-  " Select a project
+  " Select a project (peco)
   let in_name = tempname()
   let project_dirs = s:get_project_dirs(a:dirs_pattern)
   call writefile(project_dirs, in_name)
   let peco_args = get(a:options, 'peco_args', [])
-  let peco_args = type(peco_args) ==# v:t_list ? peco_args : []
-  let term_bufnr = term_start(['peco'] + peco_args + ['--exec', 'vargs call project_guide#_tcd_and_open', in_name], #{
-    \ curwin: v:true,
-    \ term_finish: 'close',
-    \ term_api: 'project_guide#_',
-    \})
+  let peco_args = copy(type(peco_args) ==# v:t_list ? peco_args : [])
+  let peco_args += [in_name]
+  let initial_bufnr = bufnr('')
   let gof_args = get(a:options, 'gof_args', [])
-  let gof_args = type(gof_args) ==# v:t_list ? gof_args : []
-  call setbufvar(term_bufnr, 'project_guide_context', #{
+  let gof_args = copy(type(gof_args) ==# v:t_list ? gof_args : [])
+  let peco_ctx = #{
+    \ popup: popup_dialog('Choose a project', #{time: 2000}),
     \ in_name: in_name,
     \ gof_args: gof_args,
+    \ initial_bufnr: initial_bufnr,
+    \ open_func: a:options->get('open_func', function('project_guide#default_open_func')),
+    \}
+  let term_bufnr = term_start(['peco'] + peco_args, #{
+    \ curwin: v:true,
+    \ exit_cb: function('s:tcd_and_select_file', [peco_ctx]),
+    \ term_api: 'project_guide#_',
     \})
 endfunction
 
-function! project_guide#complete(dirs_pattern, arglead, cmdline, pos) abort
-  let dirs = s:get_project_dirs(a:dirs_pattern)
-  if a:arglead !=# ''
-    call filter(dirs, 'stridx(v:val, a:arglead) !=# -1')
-  endif
-  return dirs
+function! project_guide#default_open_func(path_list) abort
+  for path in a:path_list
+    execute 'split' path
+  endfor
 endfunction
 
 function! project_guide#define_command(cmdname, dirs_pattern_func, options = {}) abort
@@ -62,6 +69,14 @@ function! project_guide#define_command(cmdname, dirs_pattern_func, options = {})
   execute 'command! -nargs=* -complete=customlist,s:complete_' .. a:cmdname .. ' ' .. a:cmdname .. ' call s:open(' .. string(a:options) .. ', <q-args>)'
 endfunction
 
+function! project_guide#complete(dirs_pattern, arglead, cmdline, pos) abort
+  let dirs = s:get_project_dirs(a:dirs_pattern)
+  if a:arglead !=# ''
+    call filter(dirs, 'stridx(v:val, a:arglead) !=# -1')
+  endif
+  return dirs
+endfunction
+
 function! s:open(options, query) abort
   let options = deepcopy(a:options)
   if !has_key(options, 'peco_args') || type(options.peco_args) !=# v:t_list
@@ -84,7 +99,7 @@ function! s:check_required_cmds() abort
     return s:checked_required_cmds
   endif
   let ok = v:true
-  for cmd in ['gof', 'peco', 'vargs']
+  for cmd in ['gof', 'peco']
     if !executable(cmd)
       echohl ErrorMsg
       echomsg "project-guide: missing '" .. cmd .. "' command in your PATH"
@@ -96,34 +111,90 @@ function! s:check_required_cmds() abort
   return ok
 endfunction
 
-function! project_guide#_tcd_and_open(bufnr, path) abort
-  let ctx = getbufvar(a:bufnr, 'project_guide_context', v:null)
-  if ctx is# v:null
-    throw 'project_guide#_tcd_and_open: could not get b:project_guide_context from terminal buffer'
+function! s:tcd_and_select_file(peco_ctx, job, code) abort
+  " Do peco finalization
+  call popup_close(a:peco_ctx.popup)
+  if a:code !=# 0
+    echohl ErrorMsg
+    echomsg 'project-guide: peco exited abnormally'
+    echohl None
+    return
   endif
-  tabedit
-  call term_sendkeys(a:bufnr, "\<Esc>")  " exit peco
-  call delete(ctx.in_name)
+  let peco_bufnr = ch_getbufnr(a:job, 'out')
+  let path = term_getline(peco_bufnr, 1)
+  if path ==# ''    " peco exited successfully with no result
+    " Restore initial buffer
+    if bufexists(a:peco_ctx.initial_bufnr) && a:peco_ctx.initial_bufnr !=# bufnr('')
+      execute a:peco_ctx.initial_bufnr 'buffer'
+    else
+      enew
+    endif
+    return
+  elseif !isdirectory(path)
+    echohl ErrorMsg
+    echomsg 'project-guide: No such directory:' path
+    echohl None
+    return
+  endif
+  call delete(a:peco_ctx.in_name)
   " Change current directory to the project
-  execute 'tcd' a:path
-  " Select a file to open
-  let popup = popup_dialog('Select a file to open', {})
-  let term_bufnr = term_start(['gof'] + ctx.gof_args + ['-tf', 'project_guide#_finalize'], #{
+  execute 'tcd' path
+  " Select a file to open (gof)
+  " -x 0: make cancel successfull exit
+  " -a ctrl-o: behave Ctrl-O like same as Enter
+  let gof_args = a:peco_ctx.gof_args +
+    \ ['-x', '0', '-a', 'ctrl-o']
+  let gof_ctx = #{
+    \ popup: popup_dialog('Choose a file', #{time: 2000}),
+    \ initial_bufnr: a:peco_ctx.initial_bufnr,
+    \ open_func: a:peco_ctx.open_func,
+    \}
+  let term_bufnr = term_start(['gof'] + gof_args, #{
     \ curwin: v:true,
-    \ term_finish: 'close',
+    \ exit_cb: function('s:finalize_gof', [gof_ctx]),
     \ term_api: 'project_guide#_',
-    \})
-  call setbufvar(term_bufnr, 'project_guide_context', #{
-    \ popup: popup,
-    \ term_winid: win_getid(bufwinnr(term_bufnr))
     \})
 endfunction
 
-function! project_guide#_finalize(bufnr, file) abort
-  let ctx = getbufvar(a:bufnr, 'project_guide_context', v:null)
-  if ctx is# v:null
-    throw 'project_guide#_finalize: could not get b:project_guide_context from terminal buffer'
+" Do gof finalization
+function! s:finalize_gof(gof_ctx, job, code) abort
+  if a:code !=# 0
+    echohl ErrorMsg
+    echomsg 'project-guide: gof exited abnormally'
+    echohl None
+    return
   endif
-  call popup_close(ctx.popup)
-  execute 'drop' a:file.fullpath
+  call popup_close(a:gof_ctx.popup)
+  let gof_bufnr = ch_getbufnr(a:job, 'out')
+  let action = term_getline(gof_bufnr, 1)
+  " Open selected file(s).
+  " Get all paths before :drop replaces current terminal window.
+  if action ==# '' || action ==# 'ctrl-o'
+    let lnum = 2
+    let path_list = []
+    while v:true
+      let path = term_getline(gof_bufnr, lnum)
+      if path ==# ''
+        break
+      endif
+      let path_list += [path]
+      let lnum += 1
+    endwhile
+    call call(a:gof_ctx.open_func, [path_list])
+  else
+    throw 'project-guide: unknown gof action: ' . action
+  endif
+  " Close gof window and may restore initial buffer if no other windows
+  if bufwinnr(gof_bufnr) !=# -1
+    if winnr('$') ==# 1
+      if bufexists(a:gof_ctx.initial_bufnr) && a:gof_ctx.initial_bufnr !=# bufnr('')
+        execute a:gof_ctx.initial_bufnr 'buffer'
+      else
+        enew
+      endif
+    else
+      let gof_winid = win_getid(bufwinnr(gof_bufnr))
+      call win_execute(gof_winid, 'close')
+    endif
+  endif
 endfunction
