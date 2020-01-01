@@ -46,9 +46,9 @@ function! s:select_project(dirs_pattern, options) abort
     \})
 endfunction
 
-function! project_guide#default_open_func(path_list) abort
+function! project_guide#default_open_func(path_list, opencmd = 'split') abort
   for path in a:path_list
-    execute 'split' path
+    execute a:opencmd path
   endfor
 endfunction
 
