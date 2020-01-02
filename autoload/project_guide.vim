@@ -42,7 +42,6 @@ function! s:select_project(dirs_pattern, options) abort
   let term_bufnr = term_start(['peco'] + peco_args, #{
     \ curwin: v:true,
     \ exit_cb: function('s:tcd_and_select_file', [peco_ctx]),
-    \ term_api: 'project_guide#_',
     \})
 endfunction
 
@@ -159,7 +158,6 @@ function! s:tcd_and_select_file(peco_ctx, job, code) abort
   let term_bufnr = term_start(['gof'] + gof_args, #{
     \ curwin: v:true,
     \ exit_cb: function('s:finalize_gof', [gof_ctx]),
-    \ term_api: 'project_guide#_',
     \})
 endfunction
 
