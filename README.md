@@ -1,12 +1,12 @@
 # project-guide.vim
 
-This library provides cool function to quickly open a project.
+This library provides cool UI to quickly open a project and file(s).
 Currently `project_guide#open({project directories pattern})` does:
 
-1. Show project directories
+1. Choose a project (UI is [peco](https://github.com/peco/peco))
 2. `:tcd {project directory}`
-3. Show files in the project
-4. `:drop {file}`
+3. Choose file(s) (UI is [gof](https://github.com/mattn/gof))
+4. `:split {file(s)}`
 
 ## Examples
 
@@ -20,18 +20,31 @@ function! s:gopath_dirs_pattern() abort
 endfunction
 " call project_guide#define_command() at VimEnter,
 " because project-guide.vim is not loaded yet in your vimrc.
-autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'), #{gof_args: ['-f']})
+autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'))
+" Or with custom options
+" autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'), #{peco_args: ['--select-1'], gof_args: ['-f']})
 ```
 
-![](https://i.imgur.com/YJ4qWsT.gif)
+Choose a project and files to open quickly.
 
-You can also specify initial query (`:Gopath myproject`)
+![](https://i.imgur.com/v1LPefs.gif)
 
-![](https://i.imgur.com/x1cagS1.gif)
+You can specify initial query (`:Gopath myproject`)
+(and you can skip choosing a project by specifying `#{peco_args: ['--select-1']}`
+when filtered project is only one)
 
-And you can complete Ex command arguments (`:Gopath <Tab>` or `:Gopath myproj<Tab>`)
+![](https://i.imgur.com/joDXpt9.gif)
 
-![](https://i.imgur.com/DEM2bDk.gif)
+Open multiple files (Ctrl-Z to select).
+
+![](https://i.imgur.com/V4cjMCW.gif)
+
+Complete Ex command arguments (`:Gopath <Tab>` or `:Gopath myproj<Tab>`)
+
+![](https://i.imgur.com/HcJaDji.gif)
+
+See [peco](https://github.com/peco/peco) and [gof](https://github.com/mattn/gof)
+page about customizing project / file UI.
 
 ### Open `$VOLTPATH/repos/*/*/*` of [Volt](https://github.com/vim-volt/volt) (Vim plugin manager)
 
@@ -45,7 +58,23 @@ function! s:volt_repos() abort
 endfunction
 ```
 
-![](https://i.imgur.com/7Ish7j6.gif)
+![](https://i.imgur.com/kYyCuAn.gif)
+
+And below `:Gof` and `:VoltPlugConf` commands are useful to open plugconf files.
+(this does not use project-guide.vim though :)
+
+```vim
+command! -nargs=* -complete=dir Gof execute 'terminal ++close gof -t' .. (<q-args> !=# '' ? ' ' .. <q-args> : '')
+
+function! s:volt_plugconf() abort
+  let root_dir = exists('$VOLTPATH') ? '$VOLTPATH' : '$HOME/volt'
+  return expand(root_dir .. '/plugconf')
+endfunction
+execute 'command! VoltPlugConf Gof -d' s:volt_plugconf()
+```
+
+You can use `:Gof` as file fuzzy finder.
+This just invokes `gof` like above screen captures.
 
 ## Requirements
 
@@ -53,12 +82,32 @@ endfunction
 * [gof](https://github.com/mattn/gof)
 * [peco](https://github.com/peco/peco)
 
-## `project_guide#open({dirs_pattern} [, {options}])`
+## `project_guide#define_command({cmdname} (string), {dirs_pattern_func} (string or function) [, {options} = {}])`
 
-1. List up `{dirs_pattern}` directories
-2. `:tcd {selected directory}`
-3. List up files under the selected directory
-4. `:drop {selected file}`
+This example generates some functions for `:Gopath` command.
+
+```vim
+function! s:gopath_dirs_pattern() abort
+  let root_dir = exists('$GOPATH') ? expand('$GOPATH') : expand('$HOME/go')
+  let dirs_pattern = root_dir .. '/src/*/*/*'
+  return dirs_pattern
+endfunction
+call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'))
+```
+
+You can:
+
+* Specify initial query to peco (`:Gopath myproject`)
+* Complete Ex command arguments (`:Gopath <Tab>` or `:Gopath myproj<Tab>`)
+
+## Plumbing functions
+
+### `project_guide#open({dirs_pattern} [, {options}])`
+
+1. Choose a project (UI is [peco](https://github.com/peco/peco))
+2. `:tcd {project directory}`
+3. Choose file(s) (UI is [gof](https://github.com/mattn/gof))
+4. `:split {file(s)}`
 
 ```
 {options} = {
@@ -75,19 +124,56 @@ function! s:gopath(query) abort
   let root_dir = exists('$GOPATH') ? expand('$GOPATH') : expand('$HOME/go')
   call project_guide#open(root_dir .. '/src/*/*/*', #{
   \ peco_args: a:query !=# '' ? ['--query', a:query] : [],
-  \ gof_args: ['-f'],
   \})
 endfunction
 ```
 
-Now you can specify initial query to peco (`:Gopath myproject`)
+Now you can specify initial query to peco (`:Gopath myproject`).
 
 And more, if you also want to complete Ex command arguments, you can use
 `project_guide#complete()`.
 
-## `project_guide#complete({dirs_pattern}, {arglead}, {cmdline}, {pos})`
+#### All available options
+
+|Key|Type|Description|
+|--------|-----------------------------------------|------------------------------------|
+|`peco_args`|List<String>|Addtional arguments to peco (default: `[]`)|
+|`gof_args`|List<String>|Addtional arguments to gof (default: `[]`)|
+|`file_dialog_msg`|String|`{what}` for `popup_dialog({what}, {options})`. Used for choosing file(s). if empty({what}) is true, does not show popup (default: `'Choose a file'`)|
+|`file_dialog_options`|Same as `{options}` of `popup_dialog()`|`{options}` for `popup_dialog({what}, {options})` (default: `#{time: 2000}`)|
+|`project_dialog_msg`|String|same as `file_dialog_msg` but for choosing a project (default: `'Choose a project'`)|
+|`project_dialog_options`|Same as `{options}` of `popup_dialog()`|same as `file_dialog_options` but for choosing a project (default: `#{time: 2000}`)|
+|`open_func`|Function|The function to open the list of file(s) given by arguments (default: `function('project_guide#default_open_func')`)|
+
+### `project_guide#default_open_func(path_list, opencmd = 'split')`
+
+The default open function to open files in Vim after choosing file(s) by gof.
+
+```vim
+function! project_guide#default_open_func(path_list, opencmd = 'split') abort
+  for path in a:path_list
+    execute a:opencmd path
+  endfor
+endfunction
+```
+
+You can specify custom `open_func` to  `project_guide#define_command()` or `project_guide#open()` like this.
+
+```vim
+autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'), #{open_func: function('s:my_open_func')})
+function! s:my_open_func(path_list) abort
+  call project_guide#default_open_func(a:path_list, 'vsplit')
+endfunction
+```
+
+NOTE: You cannot specify lambda to `open_func` !!!  Because `string()` is used internally.
+
+### `project_guide#complete({dirs_pattern}, {arglead}, {cmdline}, {pos})`
 
 You can create custom completion function using this.
+Here is the example to do the same thing as `project_guide#define_command()`'s
+example (this is simplified code. see `project_guide#define_command()` for
+details if you are interested).
 
 ```vim
 command! -nargs=* -complete=customlist,s:complete Gopath call s:gopath(<q-args>)
@@ -95,7 +181,6 @@ command! -nargs=* -complete=customlist,s:complete Gopath call s:gopath(<q-args>)
 function! s:gopath(query) abort
   call project_guide#open(s:gopath_dirs_pattern(), #{
   \ peco_args: a:query !=# '' ? ['--query', a:query] : [],
-  \ gof_args: ['-f'],
   \})
 endfunction
 
@@ -109,24 +194,3 @@ function! s:gopath_dirs_pattern() abort
   return dirs_pattern
 endfunction
 ```
-
-Hmm, code is getting messy, is there more an "easy" way to do it?
-
-## `project_guide#define_command({cmdname} (string), {dirs_pattern_func} (string or function) [, {options} = {}])`
-
-This is the final answer, `project_guide#define_command()`.<br>
-This generates the same functions above.
-
-```vim
-function! s:gopath_dirs_pattern() abort
-  let root_dir = exists('$GOPATH') ? expand('$GOPATH') : expand('$HOME/go')
-  let dirs_pattern = root_dir .. '/src/*/*/*'
-  return dirs_pattern
-endfunction
-call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'), #{gof_args: ['-f']})
-```
-
-Now you can:
-
-* Specify initial query to peco (`:Gopath myproject`)
-* Complete Ex command arguments (`:Gopath <Tab>` or `:Gopath myproj<Tab>`)
