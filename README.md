@@ -135,15 +135,15 @@ And more, if you also want to complete Ex command arguments, you can use
 
 #### All available options
 
-|Key|Type|Description|
-|--------|-----------------------------------------|------------------------------------|
-|`peco_args`|List<String>|Addtional arguments to peco (default: `[]`)|
-|`gof_args`|List<String>|Addtional arguments to gof (default: `[]`)|
-|`file_dialog_msg`|String|`{what}` for `popup_dialog({what}, {options})`. Used for choosing file(s). if empty({what}) is true, does not show popup (default: `'Choose a file'`)|
-|`file_dialog_options`|Same as `{options}` of `popup_dialog()`|`{options}` for `popup_dialog({what}, {options})` (default: `#{time: 2000}`)|
-|`project_dialog_msg`|String|same as `file_dialog_msg` but for choosing a project (default: `'Choose a project'`)|
-|`project_dialog_options`|Same as `{options}` of `popup_dialog()`|same as `file_dialog_options` but for choosing a project (default: `#{time: 2000}`)|
-|`open_func`|Function|The function to open the list of file(s) given by arguments (default: `function('project_guide#default_open_func')`)|
+| Key                      | Type                                    | Description                                                                                                                                           |
+|--------------------------|-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `peco_args`              | List<String>                            | Addtional arguments to peco (default: `[]`)                                                                                                           |
+| `gof_args`               | List<String>                            | Addtional arguments to gof (default: `[]`)                                                                                                            |
+| `file_dialog_msg`        | String                                  | `{what}` for `popup_dialog({what}, {options})`. Used for choosing file(s). if empty({what}) is true, does not show popup (default: `'Choose a file'`) |
+| `file_dialog_options`    | Same as `{options}` of `popup_dialog()` | `{options}` for `popup_dialog({what}, {options})` (default: `#{time: 2000}`)                                                                          |
+| `project_dialog_msg`     | String                                  | same as `file_dialog_msg` but for choosing a project (default: `'Choose a project'`)                                                                  |
+| `project_dialog_options` | Same as `{options}` of `popup_dialog()` | same as `file_dialog_options` but for choosing a project (default: `#{time: 2000}`)                                                                   |
+| `open_func`              | Function                                | The function to open the list of file(s) given by arguments (default: `function('project_guide#default_open_func')`)                                  |
 
 ### `project_guide#default_open_func(path_list, opencmd = 'split')`
 
