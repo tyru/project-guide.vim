@@ -7,7 +7,7 @@ function! project_guide#open(dirs_pattern, options = {}) abort
     echomsg 'project-guide: Please use Vim 8.2 or higher.'
     echohl None
   endif
-  if !s:check_required_cmds()
+  if !s:check_required_cmds(a:options)
     return
   endif
   call s:select_project(a:dirs_pattern, a:options)
@@ -27,17 +27,32 @@ function! s:select_project(dirs_pattern, options) abort
   let initial_bufnr = bufnr('')
   let gof_args = get(a:options, 'gof_args', [])
   let gof_args = copy(type(gof_args) ==# v:t_list ? gof_args : [])
+  let files_args = get(a:options, 'files_args', [])
+  let files_args = copy(type(files_args) ==# v:t_list ? files_args : [])
   let dialog_msg = a:options->get('project_dialog_msg', 'Choose a project')
   let dialog_options = a:options->get('project_dialog_options', #{time: 2000})
   let popup = empty(dialog_msg) ? -1 : popup_dialog(dialog_msg, dialog_options)
+  let file_ui = a:options->get('file_ui', 'files+peco')
+  if file_ui ==# 'files+peco'
+    " XXX: Works on Windows?
+    let file_ui_cmd = [&shell, &shellcmdflag, 'files | peco']
+  elseif file_ui ==# 'gof'
+    " -x 0: make cancel successfull exit
+    " -a ctrl-o: behave Ctrl-O like same as Enter
+    let file_ui_cmd = ['gof'] + gof_args + ['-x', '0', '-a', 'ctrl-o']
+  else
+    throw "project-guide: unknown 'file_ui' value: " . file_ui
+  endif
   let peco_ctx = #{
     \ popup: popup,
     \ in_name: in_name,
-    \ gof_args: gof_args,
+    \ files_args: files_args,
     \ initial_bufnr: initial_bufnr,
     \ open_func: a:options->get('open_func', function('project_guide#default_open_func')),
     \ file_dialog_msg: a:options->get('file_dialog_msg', 'Choose a file'),
     \ file_dialog_options: a:options->get('file_dialog_options', #{time: 2000}),
+    \ file_ui: file_ui,
+    \ file_ui_cmd: file_ui_cmd,
     \}
   let term_bufnr = term_start(['peco'] + peco_args, #{
     \ curwin: v:true,
@@ -98,12 +113,12 @@ function! s:current_tabpage_is_empty() abort
   return winnr('$') ==# 1 && !&modified && line('$') ==# 1 && getline(1) ==# ''
 endfunction
 
-function! s:check_required_cmds() abort
+function! s:check_required_cmds(options) abort
   if exists('s:checked_required_cmds')
     return s:checked_required_cmds
   endif
   let ok = v:true
-  for cmd in ['gof', 'peco']
+  for cmd in ['peco'] + [get(a:options, 'file_ui', 'files+peco') ==# 'files+peco' ? 'files' : 'gof']
     if !executable(cmd)
       echohl ErrorMsg
       echomsg "project-guide: missing '" .. cmd .. "' command in your PATH"
@@ -143,39 +158,40 @@ function! s:tcd_and_select_file(peco_ctx, job, code) abort
   call delete(a:peco_ctx.in_name)
   " Change current directory to the project
   execute 'tcd' path
-  " Select a file to open (gof)
-  " -x 0: make cancel successfull exit
-  " -a ctrl-o: behave Ctrl-O like same as Enter
-  let gof_args = a:peco_ctx.gof_args +
-    \ ['-x', '0', '-a', 'ctrl-o']
+  " Select a file to open
   let popup = empty(a:peco_ctx.file_dialog_msg) ?
     \ -1 : popup_dialog(a:peco_ctx.file_dialog_msg, a:peco_ctx.file_dialog_options)
-  let gof_ctx = #{
+  let file_ctx = #{
     \ popup: popup,
     \ initial_bufnr: a:peco_ctx.initial_bufnr,
     \ open_func: a:peco_ctx.open_func,
     \}
-  let term_bufnr = term_start(['gof'] + gof_args, #{
+  let term_bufnr = term_start(a:peco_ctx.file_ui_cmd, #{
     \ curwin: v:true,
-    \ exit_cb: function('s:finalize_gof', [gof_ctx]),
+    \ exit_cb: function('s:finalize_file_ui_cmd', [a:peco_ctx.file_ui, file_ctx]),
     \})
 endfunction
 
 " Do gof finalization
-function! s:finalize_gof(gof_ctx, job, code) abort
+function! s:finalize_file_ui_cmd(file_ui, file_ctx, job, code) abort
   if a:code !=# 0
     echohl ErrorMsg
     echomsg 'project-guide: gof exited abnormally'
     echohl None
     return
   endif
-  call popup_close(a:gof_ctx.popup)
+  call popup_close(a:file_ctx.popup)
   let gof_bufnr = ch_getbufnr(a:job, 'out')
-  let action = term_getline(gof_bufnr, 1)
+  if a:file_ui ==# 'gof'
+    let action = term_getline(gof_bufnr, 1)
+    let lnum = 2
+  else
+    let action = ''
+    let lnum = 1
+  endif
   " Open selected file(s).
   " Get all paths before :drop replaces current terminal window.
   if action ==# '' || action ==# 'ctrl-o'
-    let lnum = 2
     let path_list = []
     while v:true
       let path = term_getline(gof_bufnr, lnum)
@@ -185,15 +201,15 @@ function! s:finalize_gof(gof_ctx, job, code) abort
       let path_list += [path]
       let lnum += 1
     endwhile
-    call call(a:gof_ctx.open_func, [path_list])
+    call call(a:file_ctx.open_func, [path_list])
   else
     throw 'project-guide: unknown gof action: ' . action
   endif
   " Close gof window and may restore initial buffer if no other windows
   if bufwinnr(gof_bufnr) !=# -1
     if winnr('$') ==# 1
-      if bufexists(a:gof_ctx.initial_bufnr) && a:gof_ctx.initial_bufnr !=# bufnr('')
-        execute a:gof_ctx.initial_bufnr 'buffer'
+      if bufexists(a:file_ctx.initial_bufnr) && a:file_ctx.initial_bufnr !=# bufnr('')
+        execute a:file_ctx.initial_bufnr 'buffer'
       else
         enew
       endif
