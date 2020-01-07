@@ -151,6 +151,7 @@ function! s:tcd_and_select_file(peco_ctx, job, code) abort
     return
   endif
   let peco_bufnr = ch_getbufnr(a:job, 'out')
+  call term_wait(peco_bufnr, 2000)
   let path = term_getline(peco_bufnr, 1)
   if path ==# ''    " peco exited successfully with no result
     " Restore initial buffer
