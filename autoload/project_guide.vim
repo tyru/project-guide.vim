@@ -6,6 +6,7 @@ function! project_guide#open(dirs_pattern, options = {}) abort
     echohl ErrorMsg
     echomsg 'project-guide: Please use Vim 8.2 or higher.'
     echohl None
+    return
   endif
   if !s:check_required_cmds(a:options)
     return
