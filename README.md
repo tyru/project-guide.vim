@@ -28,6 +28,32 @@ autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopat
 " autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopath_dirs_pattern'), #{peco_args: ['--select-1'], gof_args: ['-f']})
 ```
 
+And project-guide.vim looks up a session file under project directory if `load_session == v:true` (default: `v:true`).<br>
+You can emit the session file to restore window layout, and so on (see `:help session-file`).
+
+**Recommend:**
+By default Vim 'sessionoptions' value, it *replaces* current all open tabpages after loading a session file.
+If you want to *append* a tabpage of selected project, try `set sessionoptions-=tabpages` in your vimrc.
+
+If you want to auto-update `Session.vim` file in current project every 30 seconds:
+
+```vim
+autocmd User project-guide-post-tcd let t:vimrc_update_session_constantly = getcwd() . '/Session.vim'
+autocmd User project-guide-post-file-open execute 'mksession!' t:vimrc_update_session_constantly
+" Execute :mksession! in all tabpages which have t:vimrc_update_session_constantly
+function! s:update_session(timer) abort
+  let winid = win_getid()
+  tabdo if t:->has_key('vimrc_update_session_constantly') | execute 'mksession!' t:vimrc_update_session_constantly | endif
+  call win_gotoid(winid)
+endfunction
+" Call above function every 30 seconds
+function! s:register_update_session() abort
+  let sec = 1000
+  call timer_start(30 * sec, function('s:update_session'), #{repeat: -1})
+endfunction
+call s:register_update_session()
+```
+
 Choose a project and files to open quickly.
 
 ![](https://i.imgur.com/v1LPefs.gif)
