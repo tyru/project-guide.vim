@@ -5,8 +5,11 @@ Currently `project_guide#open({project directories pattern})` does:
 
 1. Choose a project (UI is [peco](https://github.com/peco/peco))
 2. `:tcd {project directory}`
-3. Choose file(s) (UI is peco (+ [files](https://github.com/mattn/files)) or [gof](https://github.com/mattn/gof))
-4. `:split {file(s)}`
+3. If a session file (default: `Session.vim`) is found and `load_session` is enabled
+  a. Load the session file
+4. If a session file is NOT found
+  a. Choose file(s) (UI is peco (+ [files](https://github.com/mattn/files)) or [gof](https://github.com/mattn/gof))
+  b. `:split {file(s)}`
 
 ## Examples
 
@@ -141,10 +144,12 @@ And more, if you also want to complete Ex command arguments, you can use
 | `gof_args`               | List<String>                            | Addtional arguments to gof (default: `[]`)                                                                                                            |
 | `file_dialog_msg`        | String                                  | `{what}` for `popup_dialog({what}, {options})`. Used for choosing file(s). if empty({what}) is true, does not show popup (default: `'Choose a file'`) |
 | `file_dialog_options`    | Same as `{options}` of `popup_dialog()` | `{options}` for `popup_dialog({what}, {options})` (default: `#{time: 2000}`)                                                                          |
-| `file_ui`                | String                                  | Use files + peco when value is `files+peco`. otherwise gof (default: `files+peco`)                                                                                |
+| `file_ui`                | String                                  | Use files + peco when value is `files+peco`. otherwise gof (default: `files+peco`)                                                                    |
 | `project_dialog_msg`     | String                                  | same as `file_dialog_msg` but for choosing a project (default: `'Choose a project'`)                                                                  |
 | `project_dialog_options` | Same as `{options}` of `popup_dialog()` | same as `file_dialog_options` but for choosing a project (default: `#{time: 2000}`)                                                                   |
 | `open_func`              | Function                                | The function to open the list of file(s) given by arguments (default: `function('project_guide#default_open_func')`)                                  |
+| `load_session`           | Boolean                                 | Load session file or not (default: `v:true`)                                                                                                          |
+| `session_file`           | String                                  | Session file name (default: `'Session.vim'`)                                                                                                          |
 
 ### `project_guide#default_open_func(path_list, opencmd = 'split')`
 

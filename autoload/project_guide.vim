@@ -53,6 +53,8 @@ function! s:select_project(dirs_pattern, options) abort
     \ file_dialog_options: a:options->get('file_dialog_options', #{time: 2000}),
     \ file_ui: file_ui,
     \ file_ui_cmd: file_ui_cmd,
+    \ load_session: a:options->get('load_session', v:true),
+    \ session_file: a:options->get('session_file', 'Session.vim'),
     \}
   let term_bufnr = term_start(['peco'] + peco_args, #{
     \ curwin: v:true,
@@ -158,6 +160,10 @@ function! s:tcd_and_select_file(peco_ctx, job, code) abort
   call delete(a:peco_ctx.in_name)
   " Change current directory to the project
   execute 'tcd' path
+  if a:peco_ctx.load_session && filereadable(a:peco_ctx.session_file)
+    execute 'source' a:peco_ctx.session_file
+    return
+  endif
   " Select a file to open
   let popup = empty(a:peco_ctx.file_dialog_msg) ?
     \ -1 : popup_dialog(a:peco_ctx.file_dialog_msg, a:peco_ctx.file_dialog_options)
