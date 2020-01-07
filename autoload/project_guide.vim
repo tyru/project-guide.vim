@@ -43,7 +43,6 @@ function! s:select_project(dirs_pattern, options) abort
   let popup = empty(dialog_msg) ? -1 : popup_dialog(dialog_msg, dialog_options)
   let file_ui = a:options->get('file_ui', 'files+peco')
   if file_ui ==# 'files+peco'
-    " XXX: Works on Windows?
     let file_ui_cmd = [&shell, &shellcmdflag, 'files | peco']
   elseif file_ui ==# 'gof'
     " -x 0: make cancel successfull exit
