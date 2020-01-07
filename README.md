@@ -6,10 +6,10 @@ Currently `project_guide#open({project directories pattern})` does:
 1. Choose a project (UI is [peco](https://github.com/peco/peco))
 2. `:tcd {project directory}`
 3. If a session file (default: `Session.vim`) is found and `load_session` is enabled
-  a. Load the session file
+    1. Load the session file
 4. If a session file is NOT found
-  a. Choose file(s) (UI is peco (+ [files](https://github.com/mattn/files)) or [gof](https://github.com/mattn/gof))
-  b. `:split {file(s)}`
+    1. Choose file(s) (UI is peco (+ [files](https://github.com/mattn/files)) or [gof](https://github.com/mattn/gof))
+    2. `:split {file(s)}`
 
 ## Examples
 
@@ -31,10 +31,6 @@ autocmd VimEnter * call project_guide#define_command('Gopath', function('s:gopat
 And project-guide.vim looks up a session file under project directory if `load_session == v:true` (default: `v:true`).<br>
 You can emit the session file to restore window layout, and so on (see `:help session-file`).
 
-**Recommend:**
-By default Vim 'sessionoptions' value, it *replaces* current all open tabpages after loading a session file.
-If you want to *append* a tabpage of selected project, try `set sessionoptions-=tabpages` in your vimrc.
-
 If you want to auto-update `Session.vim` file in current project every 30 seconds:
 
 ```vim
@@ -53,6 +49,12 @@ function! s:register_update_session() abort
 endfunction
 call s:register_update_session()
 ```
+
+**Recommend:**
+By default Vim 'sessionoptions' value, it *replaces* current all open tabpages after loading a session file.<br>
+If you want to *append* a tabpage of selected project, try `set sessionoptions-=tabpages` in your vimrc.
+
+## Screenshots
 
 Choose a project and files to open quickly.
 
