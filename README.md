@@ -38,6 +38,9 @@ autocmd User project-guide-post-tcd let t:vimrc_update_session_constantly = getc
 autocmd User project-guide-post-file-open execute 'mksession!' t:vimrc_update_session_constantly
 " Execute :mksession! in all tabpages which have t:vimrc_update_session_constantly
 function! s:update_session(timer) abort
+  if getcmdwintype() !=# ''    " :tabdo raises an error in cmdwin
+    return
+  endif
   let winid = win_getid()
   tabdo if t:->has_key('vimrc_update_session_constantly') | execute 'mksession!' t:vimrc_update_session_constantly | endif
   call win_gotoid(winid)
